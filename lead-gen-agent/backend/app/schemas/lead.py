@@ -2,6 +2,7 @@
 Shared Lead schema — the contract between the pipeline (Person A) and the
 API/dashboard (Person B). Changes here should be agreed on together.
 """
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from enum import Enum
 from typing import Optional
@@ -41,6 +42,7 @@ class LLMOutput(BaseModel):
 
 
 class Lead(BaseModel):
+    model_config = {"from_attributes": True}
     id: str
     business_name: str
     category: Optional[str] = None
@@ -60,6 +62,10 @@ class Lead(BaseModel):
 
     created_at: datetime
     updated_at: datetime
+    @field_validator("id", mode="before")
+    @classmethod
+    def _stringify_id(cls, v):
+        return str(v)
 
 
 class LeadListResponse(BaseModel):
@@ -91,6 +97,7 @@ class JobStatus(str, Enum):
 
 
 class Job(BaseModel):
+    model_config = {"from_attributes": True}
     id: str
     keywords: str
     location: str
@@ -99,3 +106,7 @@ class Job(BaseModel):
     leads_processed: int = 0
     created_at: datetime
     updated_at: datetime
+    @field_validator("id", mode="before")
+    @classmethod
+    def _stringify_id(cls, v):
+        return str(v)
