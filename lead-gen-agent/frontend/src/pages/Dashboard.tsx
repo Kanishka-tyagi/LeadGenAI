@@ -136,7 +136,7 @@ useEffect(() => {
           </tbody>
         </table>
 
-        {selected && <LeadDetailPanel lead={selected} />}
+       {selected && <LeadDetailPanel lead={selected} token={token} />}
       </div>
     </div>
   );
@@ -147,10 +147,39 @@ function ScoreBadge({ score }: { score: number }) {
   return <span className={`score-badge score-${tier}`}>{score}</span>;
 }
 
-function LeadDetailPanel({ lead }: { lead: Lead }) {
+interface LeadDetailPanelProps {
+  lead: Lead;
+  token: string;
+}
+
+function LeadDetailPanel({ lead, token }: LeadDetailPanelProps) {
   const [emailBody, setEmailBody] = useState(
     lead.edited_email_body ?? lead.llm_output?.drafted_email_body ?? ""
   );
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetchWithAuth(`/api/leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          edited_email_body: emailBody,
+        }),
+        token,
+      });
+      if (res.ok) {
+        alert("Saved!");
+      } else {
+        alert("Failed to save");
+      }
+    } catch (err) {
+      alert("Error saving");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <aside className="lead-detail">
@@ -200,8 +229,8 @@ function LeadDetailPanel({ lead }: { lead: Lead }) {
             value={emailBody}
             onChange={(e) => setEmailBody(e.target.value)}
           />
-          <button onClick={() => alert("Wire this up to PATCH /leads/{id}")}>
-            Save & approve
+          <button onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save & approve"}
           </button>
         </section>
       )}

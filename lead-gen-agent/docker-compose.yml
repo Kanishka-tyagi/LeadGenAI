@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: leadgen-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: devpass
+      POSTGRES_DB: leadgen
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: leadgen-backend
+    environment:
+      DATABASE_URL: postgresql://postgres:devpass@db:5432/leadgen
+      SECRET_KEY: e9d7461713b40b419e74a1ab219f7153d7c6dc8872fe6e47efd35a6f9445d8c3
+      TEAM_USERNAME: team
+      TEAM_PASSWORD_HASH: "$$2b$$12$$nQiRjSnjqJQ07G33.ITBfekw09GhlQrI.3EsH9UZWMftSK.l54u8u"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: sh -c "python -m app.db.init_db && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+volumes:
+  postgres_data:

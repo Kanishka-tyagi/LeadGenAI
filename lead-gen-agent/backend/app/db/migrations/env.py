@@ -57,12 +57,19 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
+    """Run migrations in 'online' mode."""
+    import os
+    
+    # Get database URL from environment (Docker Compose sets this)
+    # Fall back to a hardcoded localhost connection if not set
+    database_url = os.getenv(
+        "DATABASE_URL",
+        "postgresql://postgres:devpass@localhost:5432/leadgen"
+    )
+    
+    # Override the config with the correct URL
+    config.set_main_option("sqlalchemy.url", database_url)
+    
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
@@ -76,9 +83,3 @@ def run_migrations_online() -> None:
 
         with context.begin_transaction():
             context.run_migrations()
-
-
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    run_migrations_online()
