@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Lead, LeadListResponse, LeadStatus } from "../api/types";
 import { effectiveScore } from "../api/types";
-async function fetchLeads(): Promise<LeadListResponse> {
-  const res = await fetch("/api/leads");
+import { fetchWithAuth } from "../api/types";
+
+async function fetchLeads(token: string): Promise<LeadListResponse> {
+  const res = await fetchWithAuth("/api/leads", { token });
+  if (!res.ok) {
+    throw new Error("Failed to fetch leads");
+  }
   return res.json();
 }
+
 
 const STATUS_OPTIONS: (LeadStatus | "all")[] = [
   "all",
@@ -16,7 +22,12 @@ const STATUS_OPTIONS: (LeadStatus | "all")[] = [
   "rejected",
 ];
 
-export default function Dashboard() {
+interface DashboardProps {
+  token: string;
+  onLogout: () => void;
+}
+
+export default function Dashboard({ token, onLogout }: DashboardProps)  {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all");
@@ -24,12 +35,12 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchLeads().then((res) => {
-      setLeads(res.items);
-      setLoading(false);
-    });
-  }, []);
+useEffect(() => {
+  fetchLeads(token).then((res) => {
+    setLeads(res.items);
+    setLoading(false);
+  });
+}, [token]);
 
   const filtered = useMemo(() => {
     return leads
@@ -48,8 +59,13 @@ export default function Dashboard() {
   return (
     <div className="dashboard">
       <header className="dashboard-header">
-        <h1>Leads</h1>
-        <div className="filters">
+  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <h1>Leads</h1>
+    <button onClick={onLogout} style={{ background: "#e74c3c" }}>
+      Log out
+    </button>
+  </div>
+  <div className="filters">
           <input
             placeholder="Search business name..."
             value={search}
