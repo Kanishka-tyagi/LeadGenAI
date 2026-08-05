@@ -4,7 +4,7 @@ Database connection setup. This is what actually talks to Postgres.
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = "postgresql://postgres:devpass@localhost:5432/leadgen"
+DATABASE_URL = "postgresql://postgres:Vision@localhost:5432/leadgen"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
