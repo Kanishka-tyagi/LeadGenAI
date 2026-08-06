@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import leads, jobs
+from app.api.routes import leads, jobs, auth
 
 app = FastAPI(title="Lead Gen Agent API")
 
@@ -12,7 +12,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+app.include_router(auth.router)
 app.include_router(leads.router)
 app.include_router(jobs.router)
 

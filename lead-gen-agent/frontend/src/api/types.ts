@@ -54,3 +54,17 @@ export interface LeadListResponse {
 export function effectiveScore(lead: Lead): number {
   return lead.overridden_score ?? lead.llm_output?.overall_lead_score ?? 0;
 }
+
+export function fetchWithAuth(
+  url: string,
+  options: RequestInit & { token?: string } = {}
+) {
+  const { token, ...opts } = options;
+  const headers = new Headers(opts.headers || {});
+  
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  
+  return fetch(url, { ...opts, headers });
+}

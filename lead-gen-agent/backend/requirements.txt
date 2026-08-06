@@ -2,6 +2,7 @@ alembic==1.18.5
 annotated-doc==0.0.4
 annotated-types==0.8.0
 anyio==4.14.2
+bcrypt==4.0.1
 click==8.4.2
 colorama==0.4.6
 ecdsa==0.19.2
@@ -20,6 +21,7 @@ pydantic-settings==2.14.2
 pydantic_core==2.46.4
 python-dotenv==1.2.2
 python-jose==3.5.0
+python-multipart==0.0.32
 PyYAML==6.0.3
 rsa==4.9.1
 six==1.17.0

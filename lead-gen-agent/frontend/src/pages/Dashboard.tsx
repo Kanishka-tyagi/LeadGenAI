@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Lead, LeadListResponse, LeadStatus } from "../api/types";
 import { effectiveScore } from "../api/types";
-async function fetchLeads(): Promise<LeadListResponse> {
-  const res = await fetch("/api/leads");
+import { fetchWithAuth } from "../api/types";
+
+async function fetchLeads(token: string): Promise<LeadListResponse> {
+  const res = await fetchWithAuth("/api/leads", { token });
+  if (!res.ok) {
+    throw new Error("Failed to fetch leads");
+  }
   return res.json();
 }
+
 
 const STATUS_OPTIONS: (LeadStatus | "all")[] = [
   "all",
@@ -16,7 +22,12 @@ const STATUS_OPTIONS: (LeadStatus | "all")[] = [
   "rejected",
 ];
 
-export default function Dashboard() {
+interface DashboardProps {
+  token: string;
+  onLogout: () => void;
+}
+
+export default function Dashboard({ token, onLogout }: DashboardProps)  {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all");
@@ -24,12 +35,12 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchLeads().then((res) => {
-      setLeads(res.items);
-      setLoading(false);
-    });
-  }, []);
+useEffect(() => {
+  fetchLeads(token).then((res) => {
+    setLeads(res.items);
+    setLoading(false);
+  });
+}, [token]);
 
   const filtered = useMemo(() => {
     return leads
@@ -48,8 +59,13 @@ export default function Dashboard() {
   return (
     <div className="dashboard">
       <header className="dashboard-header">
-        <h1>Leads</h1>
-        <div className="filters">
+  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <h1>Leads</h1>
+    <button onClick={onLogout} style={{ background: "#e74c3c" }}>
+      Log out
+    </button>
+  </div>
+  <div className="filters">
           <input
             placeholder="Search business name..."
             value={search}
@@ -120,7 +136,7 @@ export default function Dashboard() {
           </tbody>
         </table>
 
-        {selected && <LeadDetailPanel lead={selected} />}
+       {selected && <LeadDetailPanel lead={selected} token={token} />}
       </div>
     </div>
   );
@@ -131,10 +147,39 @@ function ScoreBadge({ score }: { score: number }) {
   return <span className={`score-badge score-${tier}`}>{score}</span>;
 }
 
-function LeadDetailPanel({ lead }: { lead: Lead }) {
+interface LeadDetailPanelProps {
+  lead: Lead;
+  token: string;
+}
+
+function LeadDetailPanel({ lead, token }: LeadDetailPanelProps) {
   const [emailBody, setEmailBody] = useState(
     lead.edited_email_body ?? lead.llm_output?.drafted_email_body ?? ""
   );
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetchWithAuth(`/api/leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          edited_email_body: emailBody,
+        }),
+        token,
+      });
+      if (res.ok) {
+        alert("Saved!");
+      } else {
+        alert("Failed to save");
+      }
+    } catch (err) {
+      alert("Error saving");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <aside className="lead-detail">
@@ -184,8 +229,8 @@ function LeadDetailPanel({ lead }: { lead: Lead }) {
             value={emailBody}
             onChange={(e) => setEmailBody(e.target.value)}
           />
-          <button onClick={() => alert("Wire this up to PATCH /leads/{id}")}>
-            Save & approve
+          <button onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save & approve"}
           </button>
         </section>
       )}
