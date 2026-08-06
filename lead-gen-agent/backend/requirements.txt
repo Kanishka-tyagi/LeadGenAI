@@ -36,3 +36,5 @@ httpx
 sqlalchemy
 psycopg2-binary
 python-dotenv
+playwright
+
