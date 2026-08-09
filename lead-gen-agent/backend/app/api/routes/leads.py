@@ -93,3 +93,40 @@ def update_lead(lead_id: str, patch: LeadUpdateRequest, db: Session = Depends(ge
 @router.get("/export/csv")
 def export_leads_csv():
     raise HTTPException(status_code=501, detail="Not implemented yet")
+
+@router.post("/ingest")
+def ingest_leads(leads_data: list[dict], db: Session = Depends(get_db)):
+    """
+    Endpoint for Person A's pipeline to write leads to the database.
+    Accepts raw lead objects from the scraper and validates before inserting.
+    """
+    ingested_count = 0
+    
+    for lead_dict in leads_data:
+        # Generate ID if not provided
+        if "id" not in lead_dict:
+            lead_dict["id"] = str(uuid.uuid4())
+        
+        # Add timestamps if not provided
+        now = datetime.utcnow()
+        if "created_at" not in lead_dict:
+            lead_dict["created_at"] = now
+        if "updated_at" not in lead_dict:
+            lead_dict["updated_at"] = now
+        
+        # Validate against Pydantic schema
+        try:
+            validated = Lead(**lead_dict)
+        except Exception as e:
+            print(f"Skipped invalid lead: {e}")
+            continue
+        
+        # Check if already exists
+        existing = db.query(LeadModel).filter(LeadModel.id == validated.id).first()
+        if not existing:
+            db_lead = LeadModel(**validated.model_dump())
+            db.add(db_lead)
+            ingested_count += 1
+    
+    db.commit()
+    return {"ingested": ingested_count, "total": len(leads_data)}

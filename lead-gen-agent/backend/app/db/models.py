@@ -21,6 +21,8 @@ class LeadModel(Base):
     address = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     website_url = Column(String, nullable=True)
+    contact_email = Column(String, nullable=True)
+    scrape_data = Column(JSON, nullable=True)
     status = Column(String, default="new")
 
     # sub_scores and llm_output are stored as flexible JSON blobs —
