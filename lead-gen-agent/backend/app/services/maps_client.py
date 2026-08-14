@@ -26,6 +26,7 @@ FIELD_MASK = ",".join([
     "places.websiteUri",
     "places.primaryType",
     "places.rating",
+    "places.userRatingCount",
 ])
 
 
@@ -71,12 +72,21 @@ def search_businesses(keyword: str, location: str, max_results: int = 20) -> lis
 
 
 def _normalize_place(place: dict) -> dict:
+    """
+    Normalizes a raw Places API result into our schema's field names.
+
+    NOTE: rating/reviews_count are NOT columns on LeadModel — they get
+    bundled into maps_data (JSON) when sending to the ingest endpoint,
+    not passed as top-level fields. See run_search.py.
+    """
     return {
         "business_name": place.get("displayName", {}).get("text", "Unknown"),
         "address": place.get("formattedAddress"),
         "phone": place.get("internationalPhoneNumber"),
         "website_url": place.get("websiteUri"),
         "category": place.get("primaryType"),
+        "rating": place.get("rating"),
+        "reviews_count": place.get("userRatingCount"),
     }
 
 
@@ -85,4 +95,4 @@ if __name__ == "__main__":
     # before wiring it into anything else.
     leads = search_businesses("dental clinics", "Agra, India", max_results=5)
     for l in leads:
-        print(l["business_name"], "-", l["website_url"] or "NO WEBSITE")
+        print(l["business_name"], "-", l["rating"], f"({l['reviews_count']} reviews)", "-", l["website_url"] or "NO WEBSITE")
