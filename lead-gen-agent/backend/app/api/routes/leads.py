@@ -1,11 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.db.models import LeadModel
+from app.db.models import LeadModel, JobModel
 from app.db.session import get_db
 from app.schemas.lead import Lead, LeadListResponse, LeadStatus, LeadUpdateRequest
 
@@ -113,7 +113,7 @@ def ingest_leads(leads_data: list[dict], job_id: Optional[str] = None, db: Sessi
             lead_dict["id"] = str(uuid.uuid4())
         
         # Add timestamps
-        now = datetime.utcnow()
+        now =  datetime.now(timezone.utc)
         if "created_at" not in lead_dict:
             lead_dict["created_at"] = now
         if "updated_at" not in lead_dict:
@@ -134,6 +134,12 @@ def ingest_leads(leads_data: list[dict], job_id: Optional[str] = None, db: Sessi
             ingested_count += 1
     
     db.commit()
+    if job_id:
+        job = db.query(JobModel).filter(JobModel.id == job_id).first()
+        if job:
+            job.leads_found = (job.leads_found or 0) + ingested_count
+            db.commit()
+    
     return {"ingested": ingested_count, "total": len(leads_data)}
 
 
@@ -143,7 +149,7 @@ class PipelineUpdate(BaseModel):
     sub_scores: Optional[dict] = None
     llm_output: Optional[dict] = None
 
-@router.patch("/leads/{lead_id}/pipeline")
+@router.patch("/{lead_id}/pipeline")
 def update_lead_pipeline(lead_id: str, update: PipelineUpdate, db: Session = Depends(get_db)):
     """
     Staged pipeline endpoint: Person A calls this multiple times as data becomes available.

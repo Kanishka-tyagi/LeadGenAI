@@ -53,6 +53,7 @@ class Lead(BaseModel):
     website_url: Optional[str] = None
     contact_email: Optional[str] = None
     scrape_data: Optional[dict] = None
+    maps_data: Optional[dict] = None
     status: LeadStatus = LeadStatus.new
 
     sub_scores: Optional[SubScores] = None
