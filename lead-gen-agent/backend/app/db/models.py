@@ -5,7 +5,7 @@ for what's actually stored.
 """
 import uuid
 from datetime import datetime
-
+from sqlalchemy import ForeignKey
 from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, JSON
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -16,6 +16,7 @@ class LeadModel(Base):
     __tablename__ = "leads"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=True)  # ADD THIS
     business_name = Column(String, nullable=False)
     category = Column(String, nullable=True)
     address = Column(String, nullable=True)

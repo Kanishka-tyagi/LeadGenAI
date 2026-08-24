@@ -44,6 +44,8 @@ class LLMOutput(BaseModel):
 class Lead(BaseModel):
     model_config = {"from_attributes": True}
     id: str
+    job_id: Optional[str] = None  
+
     business_name: str
     category: Optional[str] = None
     address: Optional[str] = None
