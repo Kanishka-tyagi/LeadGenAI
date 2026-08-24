@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import Optional
+import uuid
 from uuid import UUID
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query
