@@ -70,6 +70,10 @@ class Lead(BaseModel):
     @classmethod
     def _stringify_id(cls, v):
         return str(v)
+    @field_validator("job_id", mode="before")
+    @classmethod
+    def _stringify_job_id(cls, v):
+        return str(v) if v is not None else None
 
 
 class LeadListResponse(BaseModel):
