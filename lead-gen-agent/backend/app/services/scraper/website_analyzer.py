@@ -1,3 +1,11 @@
+"""
+Orchestrates all website checks: link crawling/health, viewport
+screenshots, contact info extraction, and tech signal detection.
+
+Each check is wrapped individually — one slow/broken site shouldn't
+cause the whole lead to lose all its signals. A failed check just
+falls back to an empty/neutral result instead of crashing the batch.
+"""
 import re
 from urllib.parse import urlparse, urlunparse
 
@@ -9,10 +17,6 @@ from app.services.scraper.tech_detector import detect_tech_signals
 from app.services.scraper.viewport_checks import capture_viewports
 
 EMAIL_REGEX = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
-
-
-from urllib.parse import urlparse, urlunparse
-from playwright.sync_api import sync_playwright
 
 
 def _normalize_url(url: str) -> str:
@@ -30,7 +34,7 @@ def crawl_internal_links(url: str, max_links: int = 15) -> list[str]:
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
-        page.goto(url, timeout=15000, wait_until="domcontentloaded")
+        page.goto(url, timeout=30000, wait_until="domcontentloaded")
 
         hrefs = page.eval_on_selector_all("a[href]", "els => els.map(e => e.href)")
         for href in hrefs:
@@ -57,13 +61,46 @@ def extract_contact_info(url: str) -> dict:
 
 
 def analyze_website(url: str) -> dict:
-    """Runs all checks and returns one combined signals dict for a lead."""
-    links = crawl_internal_links(url)
+    """
+    Runs all checks and returns one combined signals dict for a lead.
+    Each check is isolated — a failure in one (timeout, network error,
+    site blocking automation) doesn't prevent the others from running,
+    and doesn't crash the whole batch in run_scraper.py.
+    """
+    # --- Links: crawl + health check ---
+    try:
+        links = crawl_internal_links(url)
+        link_health = check_link_health(links)
+    except Exception as e:
+        print(f"  [warn] link crawl/check failed for {url}: {e}")
+        link_health = {"link_statuses": {}, "broken_link_ratio": None}
+
+    # --- Viewport screenshots ---
+    try:
+        screenshots = capture_viewports(url)
+    except Exception as e:
+        print(f"  [warn] screenshot capture failed for {url}: {e}")
+        screenshots = {}
+
+    # --- Contact info (emails) ---
+    try:
+        contact_info = extract_contact_info(url)
+    except Exception as e:
+        print(f"  [warn] contact info extraction failed for {url}: {e}")
+        contact_info = {"emails_found": []}
+
+    # --- Tech signals ---
+    try:
+        tech_signals = detect_tech_signals(url)
+    except Exception as e:
+        print(f"  [warn] tech signal detection failed for {url}: {e}")
+        tech_signals = {}
+
     return {
-        "links": check_link_health(links),
-        "screenshots": capture_viewports(url),
-        "contact_info": extract_contact_info(url),
-        "tech_signals": detect_tech_signals(url),
+        "links": link_health,
+        "screenshots": screenshots,
+        "contact_info": contact_info,
+        "tech_signals": tech_signals,
     }
 
 

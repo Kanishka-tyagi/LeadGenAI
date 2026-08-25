@@ -30,7 +30,7 @@ def capture_viewports(url: str, save_dir: str = "screenshots") -> dict:
 
         for name, size in VIEWPORTS.items():
             page = browser.new_page(viewport=size)
-            page.goto(url, timeout=20000, wait_until="networkidle")
+            page.goto(url, timeout=20000, wait_until="documentloaded")
 
             # let CSS/JS fade-in animations finish before capturing
             page.wait_for_timeout(2000)
