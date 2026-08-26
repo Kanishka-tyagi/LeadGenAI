@@ -22,7 +22,13 @@ REQUIRED_KEYS = [
 
 PROMPT_TEMPLATE = """You are scoring a business lead for a B2B web/app services company that SELLS website modernization, redesign, and digital presence improvement services to local businesses.
 
-IMPORTANT — what "lead score" means here: overall_lead_score measures SALES OPPORTUNITY, not website quality. A business with a broken, outdated, non-responsive website is a HIGH-value lead (they clearly need your services and are easy to pitch). A business with an excellent, modern, fast, mobile-friendly website is a LOW-value lead (nothing to sell them — do not score them highly just because their site is good).
+IMPORTANT — what "lead score" means here: overall_lead_score measures SALES OPPORTUNITY, not website quality. A business with a broken, outdated, non-responsive website is a HIGH-value lead. A business with an excellent, modern site is a LOW-value lead. A business with NO WEBSITE AT ALL is typically the HIGHEST-value lead of all — maximum opportunity, nothing to lose by pitching them.
+
+Use these fixed reference points to calibrate overall_lead_score consistently:
+- No website at all: 90-100 (maximum opportunity)
+- Website with many serious problems (slow, broken links, not mobile-friendly, no SSL): 75-90
+- Website with a few minor issues (e.g. missing analytics only, slightly slow): 40-60
+- Website that is fast, responsive, secure, with analytics and no real flaws: 0-25 (almost nothing to sell them)
 
 Business: {business_name}
 Category: {category}
@@ -30,11 +36,11 @@ Category: {category}
 Deterministic signals already computed about this business:
 {sub_scores_json}
 
-Score based on OPPORTUNITY TO SELL THEM SOMETHING, not on how good their existing website is. Return ONLY valid JSON (no markdown formatting, no preamble, no explanation outside the JSON) with exactly this shape:
+Score based on OPPORTUNITY TO SELL THEM SOMETHING, anchored to the reference points above. Return ONLY valid JSON (no markdown formatting, no preamble, no explanation outside the JSON) with exactly this shape:
 {{
   "website_score": <integer 0-100, current website QUALITY — 100 = excellent site, 0 = terrible/no site>,
   "digital_presence": <integer 0-100, current digital maturity — 100 = strong presence, 0 = nonexistent>,
-  "overall_lead_score": <integer 0-100, SALES OPPORTUNITY — 100 = desperately needs your help and is easy to pitch, 0 = already excellent, nothing to offer them>,
+  "overall_lead_score": <integer 0-100, SALES OPPORTUNITY calibrated to the reference points above>,
   "reasoning": "<one paragraph explaining the scores, referencing specific signals>",
   "recommended_pitch": "<the specific service or fix worth offering this business — if their site is already excellent, say so and note this is a low-priority lead>",
   "drafted_email_subject": "<short, non-spammy email subject line>",
@@ -59,7 +65,8 @@ def score_lead_with_llm(business_name: str, category: str, sub_scores: dict, ret
         resp = httpx.post(
             OLLAMA_URL,
             json={"model": MODEL, "prompt": prompt, "format": "json", "stream": False},
-            timeout=60.0,
+            timeout=180.0,  # generous buffer for CPU inference (dev machine hits an Ollama/RTX 50-series
+                             # Blackwell GPU-detection bug — falls back to CPU; production hardware won't have this issue)
         )
         resp.raise_for_status()
         raw_text = resp.json()["response"]
