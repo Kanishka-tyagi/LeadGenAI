@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from app.workers.tasks import run_search_job
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -22,6 +23,7 @@ def create_job(payload: JobCreateRequest, db: Session = Depends(get_db)):
     db.add(job)
     db.commit()
     db.refresh(job)
+    run_search_job.delay(str(job.id), payload.keywords, payload.location)
     return job
 
 
